@@ -20,7 +20,6 @@ namespace MFRC522 {
     const PCD_IDLE = 0x00
     const PCD_CALCCRC = 0x03
     const PCD_TRANSCEIVE = 0x0C
-    const PCD_RESETPHASE = 0x0F
 
     const MAX_LEN = 16
 
@@ -125,20 +124,9 @@ namespace MFRC522 {
     //% block="initialize MFRC522 reader"
     export function Init(): void {
         pins.spiPins(DigitalPin.P15, DigitalPin.P14, DigitalPin.P13)
-        pins.spiFormat(8, 0)
         pins.spiFrequency(1000000)
         pins.digitalWritePin(DigitalPin.P16, 1)
-
-        // Full reset sequence
-        spiWrite(CommandReg, PCD_RESETPHASE)
-        spiWrite(0x2A, 0x8D)
-        spiWrite(0x2B, 0x3E)
-        spiWrite(0x2D, 30)
-        spiWrite(0x2E, 0)
-        spiWrite(0x15, 0x40)
-        spiWrite(0x11, 0x3D)
-
-        // Antenna on
+        spiWrite(CommandReg, PCD_IDLE)
         setBitMask(TxControlReg, 0x03)
     }
 
@@ -146,9 +134,11 @@ namespace MFRC522 {
      * Write data to NTAG213 tag
      * Max 48 characters (3 pages)
      */
-    //% block="write %text to tag"
-    export function write(text: string): boolean {
-        if (!detectCard()) return false
+    //% block="write %text=text to tag"
+    //% blockId=mfrc522_write
+    //% weight=90
+    export function write(text: string): void {
+        if (!detectCard()) return
 
         let data: number[] = []
         for (let i = 0; i < text.length && i < 48; i++) {
@@ -164,16 +154,16 @@ namespace MFRC522 {
             buffer = buffer.concat(crc)
 
             let [ok, _, __] = toCard(PCD_TRANSCEIVE, buffer)
-            if (!ok) return false
+            if (!ok) return
         }
-
-        return true
     }
 
     /**
      * Read 3 pages (48 characters) from NTAG213 tag
      */
     //% block="read data from tag"
+    //% blockId=mfrc522_read
+    //% weight=85
     export function read(): string {
         if (!detectCard()) return ""
 
